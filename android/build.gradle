@@ -2,14 +2,14 @@ group 'br.com.stone.sdk_flutter'
 version '1.0-SNAPSHOT'
 
 buildscript {
-    ext.kotlin_version = '1.6.10'
+    ext.kotlin_version = '1.7.21'
     repositories {
         google()
         mavenCentral()
     }
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:7.1.2'
+        classpath 'com.android.tools.build:gradle:7.3.1'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
     }
 }
@@ -24,6 +24,14 @@ allprojects {
         throw new RuntimeException("You need to set the StonePos_packageCloudToken either in gradle.properties or in your env")
     }
 
+    repositories {
+        google()
+        mavenCentral()
+        maven { url "https://packagecloud.io/priv/${token}/stone/pos-android/maven2" }
+    }
+}
+
+rootProject.allprojects {
     repositories {
         google()
         mavenCentral()
@@ -56,6 +64,48 @@ android {
 
 
     def stone_sdk_version = "4.4.0"
+
+    String posMode = rootProject.ext.has('posMode') ? rootProject.ext.get('posMode') : (
+        project.properties.containsKey('StonePos_posMode') ?
+            project.properties['StonePos_posMode'] : (System.getenv('StonePos_posMode') ?  System.getenv('StonePos_posMode') : 'pos')
+    )
+
+    String includeIngenico = rootProject.ext.has('includeIngenico') ? rootProject.ext.get('includeIngenico') : (
+        project.properties.containsKey('StonePos_includeIngenico') ?
+            project.properties['StonePos_includeIngenico'] : (System.getenv('StonePos_includeIngenico') ? System.getenv('StonePos_includeIngenico') : 'true')
+    )
+
+    String includeSunmi = rootProject.ext.has('includeSunmi') ? rootProject.ext.get('includeSunmi') : (
+        project.properties.containsKey('StonePos_includeSunmi') ?
+            project.properties['StonePos_includeSunmi'] : (System.getenv('StonePos_includeSunmi') ? System.getenv('StonePos_includeSunmi') : 'true')
+    )
+
+    String includeGertec = rootProject.ext.has('includeGertec') ? rootProject.ext.get('includeGertec') : (
+        project.properties.containsKey('StonePos_includeGertec') ?
+            project.properties['StonePos_includeGertec'] : (System.getenv('StonePos_includeGertec') ? System.getenv('StonePos_includeGertec') : 'true')
+    )
+
+    if ( posMode.isEmpty() ) {
+        throw new RuntimeException("You need to set the StonePos_posMode either in gradle.properties or in your env")
+    }
+
+    if ( posMode.equalsIgnoreCase('pos') ) {
+        if ( includeIngenico.equalsIgnoreCase('true') ) {
+            dependencies {
+                implementation "br.com.stone:stone-sdk-posandroid-ingenico:$stone_sdk_version"
+            }
+        }
+        if ( includeSunmi.equalsIgnoreCase('true') ) {
+            dependencies {
+                implementation "br.com.stone:stone-sdk-posandroid-sunmi:$stone_sdk_version"
+            }
+        }
+        if ( includeGertec.equalsIgnoreCase('true') ) {
+            dependencies {
+                implementation "br.com.stone:stone-sdk-posandroid-gertec:$stone_sdk_version"
+            }
+        }
+    }
 
     dependencies {
         implementation "br.com.stone:stone-sdk:$stone_sdk_version"

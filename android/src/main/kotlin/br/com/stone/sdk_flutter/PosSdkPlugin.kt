@@ -33,7 +33,7 @@ import kotlin.math.ceil
  * Based on some code from https://github.com/EightSystems/react-native-stone-pos
  * Commit: 5108c3afb0a9095fff54c4e4248002eff49862b6
  */
-abstract class PosSdkPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
+class PosSdkPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
     private lateinit var channel: MethodChannel
     private lateinit var context: Context
     var currentUserList: List<UserModel>? = null
@@ -188,10 +188,12 @@ abstract class PosSdkPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
     private fun printImageInPOSPrinter(posImage: ByteArray, result: Result) {
         if (!StoneTransactionHelpers.isRunningInPOS(context)) {
             result.error("101", "You can only run this in a POS", null)
+            return;
         }
 
         if (currentUserList.isNullOrEmpty()) {
             result.error("401", "You need to activate the terminal first", null)
+            return;
         }
 
         val transactionProvider = PosPrintProvider(
@@ -249,10 +251,12 @@ abstract class PosSdkPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
     private fun printHTMLInPOSPrinter(htmlContent: String, result: Result) {
         if (!StoneTransactionHelpers.isRunningInPOS(context)) {
             result.error("101", "You can only run this in a POS", null)
+            return;
         }
 
         if (currentUserList.isNullOrEmpty()) {
             result.error("401", "You need to activate the terminal first", null)
+            return;
         }
 
         val transactionProvider = PosPrintProvider(
