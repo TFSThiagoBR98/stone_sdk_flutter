@@ -62,10 +62,16 @@ android {
         minSdkVersion 21
     }
 
-    configurations {
+    configurations.implementation {
         // Conflicts with net.sf.kxml:kxml2:2.3.0 from integration_test flutter
-        all.exclude group: "xpp3", module: "xpp3_min"
+        exclude group: "xpp3", module: "xpp3_min"
     }
+
+    configurations.debugImplementation {
+        // Conflicts with net.sf.kxml:kxml2:2.3.0 from integration_test flutter
+        exclude group: "xpp3", module: "xpp3_min"
+    }
+
 
     def stone_sdk_version = "4.4.0"
 
