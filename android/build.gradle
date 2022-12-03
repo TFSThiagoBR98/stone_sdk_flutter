@@ -1,0 +1,66 @@
+group 'br.com.stone.sdk_flutter'
+version '1.0-SNAPSHOT'
+
+buildscript {
+    ext.kotlin_version = '1.6.10'
+    repositories {
+        google()
+        mavenCentral()
+    }
+
+    dependencies {
+        classpath 'com.android.tools.build:gradle:7.1.2'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+}
+
+allprojects {
+    ext.token = rootProject.ext.has('packageCloudToken') ? rootProject.ext.get('packageCloudToken') : (
+        project.properties.containsKey('StonePos_packageCloudToken') ?
+        project.properties['StonePos_packageCloudToken'] : System.getenv('StonePos_packageCloudToken')
+    )
+
+    if (token == null || token.isEmpty()) {
+        throw new RuntimeException("You need to set the StonePos_packageCloudToken either in gradle.properties or in your env")
+    }
+
+    repositories {
+        google()
+        mavenCentral()
+        maven { url "https://packagecloud.io/priv/${token}/stone/pos-android/maven2" }
+    }
+}
+
+apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android'
+
+android {
+    compileSdkVersion 31
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    kotlinOptions {
+        jvmTarget = '1.8'
+    }
+
+    sourceSets {
+        main.java.srcDirs += 'src/main/kotlin'
+    }
+
+    defaultConfig {
+        minSdkVersion 21
+    }
+
+
+    def stone_sdk_version = "4.4.0"
+
+    dependencies {
+        implementation "br.com.stone:stone-sdk:$stone_sdk_version"
+        debugImplementation "br.com.stone.sdk.android:envconfig:$stone_sdk_version"
+        implementation "br.com.stone:stone-sdk-posandroid:$stone_sdk_version"
+        implementation 'com.izettle:html2bitmap:1.9'
+    }
+}
