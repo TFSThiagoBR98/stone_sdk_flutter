@@ -99,7 +99,7 @@ android {
         throw new RuntimeException("You need to set the StonePos_posMode either in gradle.properties or in your env")
     }
 
-    if ( posMode.equalsIgnoreCase('pos') ) {
+    if (posMode.equalsIgnoreCase('pos')) {
         if (includeIngenico.equalsIgnoreCase('true')) {
             dependencies {
                 implementation "br.com.stone:stone-sdk-posandroid-ingenico:$stone_sdk_version"
@@ -128,6 +128,6 @@ android {
                 strictly "[2.5.1]"
             }
         }
-        implementation 'com.izettle:html2bitmap:1.9'
+        implementation 'com.izettle:html2bitmap:1.10'
     }
 }

@@ -10,7 +10,6 @@ import br.com.stone.sdk_flutter.helpers.StoneTransactionHelpers
 import br.com.stone.posandroid.providers.PosPrintProvider
 import com.izettle.html2bitmap.Html2Bitmap
 import com.izettle.html2bitmap.content.WebViewContent
-
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
@@ -200,7 +199,6 @@ class PosSdkPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                 activity!!
         )
 
-
         val computedBitmap: Bitmap = BitmapFactory.decodeByteArray(posImage, 0, posImage.size)
 
         var currentY = 0
@@ -263,60 +261,60 @@ class PosSdkPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                 activity!!
         )
 
-        val computedBitmap: Bitmap? =
-                Html2Bitmap.Builder()
-                        .setContext(context)
-                        .setContent(
-                                WebViewContent.html(htmlContent)
-                        )
-                        .setBitmapWidth(380)
-                        .build().bitmap
+        Html2Bitmap.Builder().run {
+            val computedBitmap: Bitmap? = this.setContext(context)
+            .setContent(
+                WebViewContent.html(htmlContent)
+            )
+            .setBitmapWidth(380)
+            .build().bitmap
 
-        if (computedBitmap != null) {
-            var currentY = 0
-            var currentBlock = 1
-            val blockCount = ceil(computedBitmap.height / 595.00)
+            if (computedBitmap != null) {
+                var currentY = 0
+                var currentBlock = 1
+                val blockCount = ceil(computedBitmap.height / 595.00)
 
-            while (currentBlock <= blockCount) {
-                val targetHeight = if (currentY + 595 > computedBitmap.height) {
-                    computedBitmap.height - currentY
-                } else {
-                    595
-                }
+                while (currentBlock <= blockCount) {
+                    val targetHeight = if (currentY + 595 > computedBitmap.height) {
+                        computedBitmap.height - currentY
+                    } else {
+                        595
+                    }
 
-                transactionProvider.addBitmap(
+                    transactionProvider.addBitmap(
                         Bitmap.createBitmap(computedBitmap, 0, currentY, computedBitmap.width, targetHeight)
-                )
+                    )
 
-                currentY = if (currentY + 595 > computedBitmap.height) {
-                    computedBitmap.height - currentY
-                } else {
-                    currentY + 595
+                    currentY = if (currentY + 595 > computedBitmap.height) {
+                        computedBitmap.height - currentY
+                    } else {
+                        currentY + 595
+                    }
+
+                    currentBlock++
+                }
+            }
+
+            transactionProvider.useDefaultUI(true)
+            transactionProvider.dialogMessage = "Imprimindo comprovante..."
+            transactionProvider.dialogTitle = "Aguarde"
+
+            transactionProvider.connectionCallback = object : StoneActionCallback {
+                override fun onSuccess() {
+                    result.success(true)
                 }
 
-                currentBlock++
+                override fun onError() {
+                    result.error("405", "Generic Error - Transaction Failed [onError from Provider] - Check adb log output", null)
+                }
+
+                override fun onStatusChanged(action: Action?) {
+                    channel.invokeMethod("posStatusChanged", action?.name)
+                }
             }
+
+            transactionProvider.execute()
         }
-
-        transactionProvider.useDefaultUI(true)
-        transactionProvider.dialogMessage = "Imprimindo comprovante..."
-        transactionProvider.dialogTitle = "Aguarde"
-
-        transactionProvider.connectionCallback = object : StoneActionCallback {
-            override fun onSuccess() {
-                result.success(true)
-            }
-
-            override fun onError() {
-                result.error("405", "Generic Error - Transaction Failed [onError from Provider] - Check adb log output", null)
-            }
-
-            override fun onStatusChanged(action: Action?) {
-                channel.invokeMethod("posStatusChanged", action?.name)
-            }
-        }
-
-        transactionProvider.execute()
     }
 
     override fun onAttachedToActivity(binding: ActivityPluginBinding) {
