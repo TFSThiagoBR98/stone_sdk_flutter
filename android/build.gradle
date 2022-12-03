@@ -111,8 +111,12 @@ android {
     }
 
     dependencies {
+        implementation 'net.sf.kxml:kxml2:2.3.0'
         implementation "br.com.stone:stone-sdk:$stone_sdk_version"
-        debugImplementation "br.com.stone.sdk.android:envconfig:$stone_sdk_version"
+        debugImplementation ("br.com.stone.sdk.android:envconfig:$stone_sdk_version") {
+            // Conflicts with net.sf.kxml:kxml2:2.3.0 from integration_test flutter
+            exclude group: 'xpp3', module: 'xpp3_min'
+        }
         implementation "br.com.stone:stone-sdk-posandroid:$stone_sdk_version"
         implementation (group: "androidx.lifecycle", name: "lifecycle-viewmodel-ktx") {
             // Conflicts with firebase dep tree: firebase_core
