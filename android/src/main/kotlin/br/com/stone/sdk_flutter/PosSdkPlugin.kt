@@ -8,8 +8,6 @@ import android.graphics.ImageDecoder
 import androidx.annotation.NonNull
 import br.com.stone.sdk_flutter.helpers.StoneTransactionHelpers
 import br.com.stone.posandroid.providers.PosPrintProvider
-import com.izettle.html2bitmap.Html2Bitmap
-import com.izettle.html2bitmap.content.WebViewContent
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
@@ -41,7 +39,7 @@ class PosSdkPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
     override fun onAttachedToEngine(flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
         context = flutterPluginBinding.applicationContext
 
-        channel = MethodChannel(flutterPluginBinding.binaryMessenger, "stone_sdk_flutter")
+        channel = MethodChannel(flutterPluginBinding.binaryMessenger, CHANNEL)
         channel.setMethodCallHandler(this)
     }
 
@@ -247,74 +245,74 @@ class PosSdkPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
     }
 
     private fun printHTMLInPOSPrinter(htmlContent: String, result: Result) {
-        if (!StoneTransactionHelpers.isRunningInPOS(context)) {
-            result.error("101", "You can only run this in a POS", null)
-            return;
-        }
+        // if (!StoneTransactionHelpers.isRunningInPOS(context)) {
+        //     result.error("101", "You can only run this in a POS", null)
+        //     return;
+        // }
 
-        if (currentUserList.isNullOrEmpty()) {
-            result.error("401", "You need to activate the terminal first", null)
-            return;
-        }
+        // if (currentUserList.isNullOrEmpty()) {
+        //     result.error("401", "You need to activate the terminal first", null)
+        //     return;
+        // }
 
-        val transactionProvider = PosPrintProvider(
-                activity!!
-        )
+        // val transactionProvider = PosPrintProvider(
+        //         activity!!
+        // )
 
-        Html2Bitmap.Builder().run {
-            val computedBitmap: Bitmap? = this.setContext(context)
-            .setContent(
-                WebViewContent.html(htmlContent)
-            )
-            .setBitmapWidth(380)
-            .build().bitmap
+        // Html2Bitmap.Builder().run {
+        //     val computedBitmap: Bitmap? = this.setContext(context)
+        //     .setContent(
+        //         WebViewContent.html(htmlContent)
+        //     )
+        //     .setBitmapWidth(380)
+        //     .build().bitmap
 
-            if (computedBitmap != null) {
-                var currentY = 0
-                var currentBlock = 1
-                val blockCount = ceil(computedBitmap.height / 595.00)
+        //     if (computedBitmap != null) {
+        //         var currentY = 0
+        //         var currentBlock = 1
+        //         val blockCount = ceil(computedBitmap.height / 595.00)
 
-                while (currentBlock <= blockCount) {
-                    val targetHeight = if (currentY + 595 > computedBitmap.height) {
-                        computedBitmap.height - currentY
-                    } else {
-                        595
-                    }
+        //         while (currentBlock <= blockCount) {
+        //             val targetHeight = if (currentY + 595 > computedBitmap.height) {
+        //                 computedBitmap.height - currentY
+        //             } else {
+        //                 595
+        //             }
 
-                    transactionProvider.addBitmap(
-                        Bitmap.createBitmap(computedBitmap, 0, currentY, computedBitmap.width, targetHeight)
-                    )
+        //             transactionProvider.addBitmap(
+        //                 Bitmap.createBitmap(computedBitmap, 0, currentY, computedBitmap.width, targetHeight)
+        //             )
 
-                    currentY = if (currentY + 595 > computedBitmap.height) {
-                        computedBitmap.height - currentY
-                    } else {
-                        currentY + 595
-                    }
+        //             currentY = if (currentY + 595 > computedBitmap.height) {
+        //                 computedBitmap.height - currentY
+        //             } else {
+        //                 currentY + 595
+        //             }
 
-                    currentBlock++
-                }
-            }
+        //             currentBlock++
+        //         }
+        //     }
 
-            transactionProvider.useDefaultUI(true)
-            transactionProvider.dialogMessage = "Imprimindo comprovante..."
-            transactionProvider.dialogTitle = "Aguarde"
+        //     transactionProvider.useDefaultUI(true)
+        //     transactionProvider.dialogMessage = "Imprimindo comprovante..."
+        //     transactionProvider.dialogTitle = "Aguarde"
 
-            transactionProvider.connectionCallback = object : StoneActionCallback {
-                override fun onSuccess() {
-                    result.success(true)
-                }
+        //     transactionProvider.connectionCallback = object : StoneActionCallback {
+        //         override fun onSuccess() {
+        //             result.success(true)
+        //         }
 
-                override fun onError() {
-                    result.error("405", "Generic Error - Transaction Failed [onError from Provider] - Check adb log output", null)
-                }
+        //         override fun onError() {
+        //             result.error("405", "Generic Error - Transaction Failed [onError from Provider] - Check adb log output", null)
+        //         }
 
-                override fun onStatusChanged(action: Action?) {
-                    channel.invokeMethod("posStatusChanged", action?.name)
-                }
-            }
+        //         override fun onStatusChanged(action: Action?) {
+        //             channel.invokeMethod("posStatusChanged", action?.name)
+        //         }
+        //     }
 
-            transactionProvider.execute()
-        }
+        //     transactionProvider.execute()
+        // }
     }
 
     override fun onAttachedToActivity(binding: ActivityPluginBinding) {
@@ -322,14 +320,18 @@ class PosSdkPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
     }
 
     override fun onDetachedFromActivityForConfigChanges() {
-        activity = null
+        onDetachedFromActivity()
     }
 
     override fun onReattachedToActivityForConfigChanges(binding: ActivityPluginBinding) {
-        activity = binding.activity
+        onAttachedToActivity(binding)
     }
 
     override fun onDetachedFromActivity() {
         activity = null
+    }
+
+    companion object {
+        private const val CHANNEL = "br.com.stone/flutter_sdk"
     }
 }

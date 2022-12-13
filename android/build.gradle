@@ -72,7 +72,6 @@ android {
         exclude group: "xpp3", module: "xpp3_min"
     }
 
-
     def stone_sdk_version = "4.4.1"
 
     String posMode = rootProject.ext.has('posMode') ? rootProject.ext.get('posMode') : (
@@ -118,9 +117,10 @@ android {
     }
 
     dependencies {
+        implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
         implementation 'net.sf.kxml:kxml2:2.3.0'
         implementation "br.com.stone:stone-sdk:$stone_sdk_version"
-        debugImplementation "br.com.stone.sdk.android:envconfig:$stone_sdk_version"
+        //debugImplementation "br.com.stone.sdk.android:envconfig:$stone_sdk_version"
         implementation "br.com.stone:stone-sdk-posandroid:$stone_sdk_version"
         implementation (group: "androidx.lifecycle", name: "lifecycle-viewmodel-ktx") {
             // Conflicts with firebase dep tree: firebase_core
@@ -128,6 +128,5 @@ android {
                 strictly "[2.5.1]"
             }
         }
-        implementation 'com.izettle:html2bitmap:1.10'
     }
 }
