@@ -9,26 +9,23 @@ import 'stone_sdk_flutter_platform_interface.dart';
 class MethodChannelStoneSdk extends StoneSdkPlatform {
   /// The method channel used to interact with the native platform.
   @visibleForTesting
-  final methodChannel = const MethodChannel('stone_sdk_flutter');
+  final methodChannel = const MethodChannel('br.com.stone/flutter_sdk');
 
   @override
   Future<void> initSdk({required String appName}) async {
     methodChannel.setMethodCallHandler((MethodCall call) async {});
 
-    await methodChannel
-        .invokeMethod<void>('initSdk', <String, dynamic>{'appName': appName});
+    await methodChannel.invokeMethod<void>('initSdk', <String, dynamic>{'appName': appName});
   }
 
   @override
   Future<void> activateCode({required String stoneCode}) async {
-    await methodChannel.invokeMethod<void>(
-        'activateCode', <String, dynamic>{'stoneCode': stoneCode});
+    await methodChannel.invokeMethod<void>('activateCode', <String, dynamic>{'stoneCode': stoneCode});
   }
 
   @override
   Future<void> deactivateCode({required String stoneCode}) async {
-    await methodChannel.invokeMethod<void>(
-        'deactivateCode', <String, dynamic>{'stoneCode': stoneCode});
+    await methodChannel.invokeMethod<void>('deactivateCode', <String, dynamic>{'stoneCode': stoneCode});
   }
 
   @override
@@ -43,26 +40,22 @@ class MethodChannelStoneSdk extends StoneSdkPlatform {
 
   @override
   Future<bool?> printHTMLInPOSPrinter({required String htmlContent}) async {
-    return await methodChannel.invokeMethod<bool?>(
-        'printHTMLInPOSPrinter', <String, dynamic>{'htmlContent': htmlContent});
+    return await methodChannel.invokeMethod<bool?>('printHTMLInPOSPrinter', <String, dynamic>{'htmlContent': htmlContent});
   }
 
   @override
   Future<bool?> printImageInPOSPrinter({required Uint8List posImage}) async {
-    return await methodChannel.invokeMethod<bool?>(
-        'printImageInPOSPrinter', <String, dynamic>{'posImage': posImage});
+    return await methodChannel.invokeMethod<bool?>('printImageInPOSPrinter', <String, dynamic>{'posImage': posImage});
   }
 
   @override
   Future<String?> getPlatformVersion() async {
-    final version =
-        await methodChannel.invokeMethod<String>('getPlatformVersion');
+    final version = await methodChannel.invokeMethod<String>('getPlatformVersion');
     return version;
   }
 
   @override
-  Future<PaymentResponse?> sendPaymentIntent(
-      {required PaymentRequest request}) async {
+  Future<PaymentResponse?> sendPaymentIntent({required PaymentRequest request}) async {
     throw UnimplementedError('sendPaymentIntent() has not been implemented.');
   }
 }
