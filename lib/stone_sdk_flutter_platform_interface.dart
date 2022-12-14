@@ -53,18 +53,11 @@ abstract class StoneSdkPlatform extends PlatformInterface {
     throw UnimplementedError('platformVersion() has not been implemented.');
   }
 
-  Future<bool?> printHTMLInPOSPrinter({required String htmlContent}) {
-    throw UnimplementedError(
-        'printHTMLInPOSPrinter() has not been implemented.');
-  }
-
   Future<bool?> printImageInPOSPrinter({required Uint8List posImage}) {
-    throw UnimplementedError(
-        'printImageInPOSPrinter() has not been implemented.');
+    throw UnimplementedError('printImageInPOSPrinter() has not been implemented.');
   }
 
-  Future<PaymentResponse?> sendPaymentIntent(
-      {required PaymentRequest request}) {
+  Future<PaymentResponse?> sendPaymentIntent({required PaymentRequest request}) {
     throw UnimplementedError('sendPaymentIntent() has not been implemented.');
   }
 }

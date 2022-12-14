@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:stone_pos_sdk_flutter/stone_sdk_flutter.dart';
+import 'package:stone_sdk_flutter/stone_sdk_flutter.dart';
 
 void main() {
   runApp(const MyApp());
@@ -31,8 +31,7 @@ class _MyAppState extends State<MyApp> {
     // Platform messages may fail, so we use a try/catch PlatformException.
     // We also handle the message potentially returning null.
     try {
-      platformVersion = await _posSdkPlugin.getPlatformVersion() ??
-          'Unknown platform version';
+      platformVersion = await _posSdkPlugin.getPlatformVersion() ?? 'Unknown platform version';
     } on PlatformException {
       platformVersion = 'Failed to get platform version.';
     }

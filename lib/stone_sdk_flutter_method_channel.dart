@@ -39,11 +39,6 @@ class MethodChannelStoneSdk extends StoneSdkPlatform {
   }
 
   @override
-  Future<bool?> printHTMLInPOSPrinter({required String htmlContent}) async {
-    return await methodChannel.invokeMethod<bool?>('printHTMLInPOSPrinter', <String, dynamic>{'htmlContent': htmlContent});
-  }
-
-  @override
   Future<bool?> printImageInPOSPrinter({required Uint8List posImage}) async {
     return await methodChannel.invokeMethod<bool?>('printImageInPOSPrinter', <String, dynamic>{'posImage': posImage});
   }

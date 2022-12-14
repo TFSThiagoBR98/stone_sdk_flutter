@@ -9,27 +9,19 @@ class StoneSdk {
     return StoneSdkPlatform.instance.getPlatformVersion();
   }
 
-  Future<void> initSdk({required String appName}) =>
-      StoneSdkPlatform.instance.initSdk(appName: appName);
+  Future<void> initSdk({required String appName}) => StoneSdkPlatform.instance.initSdk(appName: appName);
 
-  Future<void> activateCode({required String stoneCode}) =>
-      StoneSdkPlatform.instance.activateCode(stoneCode: stoneCode);
+  Future<void> activateCode({required String stoneCode}) => StoneSdkPlatform.instance.activateCode(stoneCode: stoneCode);
 
-  Future<void> deactivateCode({required String stoneCode}) =>
-      StoneSdkPlatform.instance.deactivateCode(stoneCode: stoneCode);
+  Future<void> deactivateCode({required String stoneCode}) => StoneSdkPlatform.instance.deactivateCode(stoneCode: stoneCode);
 
   Future<bool?> isRunningInPOS() => StoneSdkPlatform.instance.isRunningInPOS();
 
-  Future<bool?> isSDKInitialized() =>
-      StoneSdkPlatform.instance.isSDKInitialized();
-
-  Future<bool?> printHTMLInPOSPrinter({required String htmlContent}) =>
-      StoneSdkPlatform.instance.printHTMLInPOSPrinter(htmlContent: htmlContent);
+  Future<bool?> isSDKInitialized() => StoneSdkPlatform.instance.isSDKInitialized();
 
   Future<bool?> printImageInPOSPrinter({required Uint8List posImage}) =>
       StoneSdkPlatform.instance.printImageInPOSPrinter(posImage: posImage);
 
-  Future<PaymentResponse?> sendPaymentIntent(
-          {required PaymentRequest request}) =>
+  Future<PaymentResponse?> sendPaymentIntent({required PaymentRequest request}) =>
       StoneSdkPlatform.instance.sendPaymentIntent(request: request);
 }

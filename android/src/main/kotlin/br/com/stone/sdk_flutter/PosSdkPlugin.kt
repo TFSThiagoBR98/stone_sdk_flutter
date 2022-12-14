@@ -4,30 +4,24 @@ import android.app.Activity
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.graphics.Canvas
-import android.os.Handler
-import android.os.Looper
-import android.view.View
-import android.webkit.WebView
-import android.webkit.WebViewClient
-import br.com.stone.posandroid.providers.PosPrintProvider
+import android.graphics.ImageDecoder
+import androidx.annotation.NonNull
 import br.com.stone.sdk_flutter.helpers.StoneTransactionHelpers
+import br.com.stone.posandroid.providers.PosPrintProvider
 import io.flutter.embedding.engine.plugins.FlutterPlugin
-import io.flutter.embedding.engine.plugins.activity.ActivityAware
-import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
-import org.json.JSONArray
+import io.flutter.embedding.engine.plugins.activity.ActivityAware
+import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
 import stone.application.StoneStart
-import stone.application.enums.Action
 import stone.application.interfaces.StoneActionCallback
+import stone.application.enums.Action
 import stone.application.interfaces.StoneCallbackInterface
 import stone.providers.ActiveApplicationProvider
 import stone.user.UserModel
 import stone.utils.Stone
-import kotlin.math.absoluteValue
 import kotlin.math.ceil
 
 /**
@@ -39,7 +33,6 @@ import kotlin.math.ceil
 class PosSdkPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
     private lateinit var channel: MethodChannel
     private lateinit var context: Context
-    private lateinit var webView: WebView
     var currentUserList: List<UserModel>? = null
     private var activity: Activity? = null
 
@@ -86,13 +79,6 @@ class PosSdkPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
             "deactivateCode" -> {
                 try {
                     deactivateCode(call.argument<String>("stoneCode")!!, result)
-                } catch (e: Exception) {
-                    result.error("sdkError", e.message, e.stackTrace);
-                }
-            }
-            "printHTMLInPOSPrinter" -> {
-                try {
-                    printHTMLInPOSPrinter(call.argument<String>("htmlContent")!!, result)
                 } catch (e: Exception) {
                     result.error("sdkError", e.message, e.stackTrace);
                 }
@@ -190,11 +176,6 @@ class PosSdkPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
     }
 
     private fun printImageInPOSPrinter(posImage: ByteArray, result: Result) {
-        val computedBitmap: Bitmap = BitmapFactory.decodeByteArray(posImage, 0, posImage.size)
-        printBitmapInPOSPrinter(computedBitmap, result);
-    }
-
-    private fun printBitmapInPOSPrinter(posImage: Bitmap, result: Result) {
         if (!StoneTransactionHelpers.isRunningInPOS(context)) {
             result.error("101", "You can only run this in a POS", null)
             return;
@@ -209,7 +190,7 @@ class PosSdkPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                 activity!!
         )
 
-        val computedBitmap: Bitmap = posImage
+        val computedBitmap: Bitmap = BitmapFactory.decodeByteArray(posImage, 0, posImage.size)
 
         var currentY = 0
         var currentBlock = 1
@@ -256,49 +237,6 @@ class PosSdkPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
         transactionProvider.execute()
     }
 
-    private fun printHTMLInPOSPrinter(htmlContent: String, result: Result) {
-        webView = WebView(this.context)
-
-        val dwidth = this.activity!!.window.windowManager.defaultDisplay.width
-        val dheight = this.activity!!.window.windowManager.defaultDisplay.height
-
-        webView.layout(0, 0, dwidth, dheight)
-        webView.loadDataWithBaseURL(null, htmlContent, "text/HTML", "UTF-8", null)
-        webView.setInitialScale(100)
-        webView.isVerticalScrollBarEnabled = false
-        webView.settings.javaScriptEnabled = false
-        webView.settings.useWideViewPort = true
-        webView.settings.javaScriptCanOpenWindowsAutomatically = true
-        webView.settings.loadWithOverviewMode = true
-        WebView.enableSlowWholeDocumentDraw()
-
-        webView.webViewClient = object : WebViewClient() {
-            override fun onPageFinished(view: WebView, url: String) {
-                super.onPageFinished(view, url)
-
-                val _duration = (dheight / 1000 ).toInt() * 200 ; /// delay 300 ms for every dheight 2000
-
-                Handler(Looper.getMainLooper()).postDelayed({
-
-                    webView.evaluateJavascript("(function() { return [document.body.offsetWidth, document.body.offsetHeight]; })();"){it
-                        val xy = JSONArray(it)
-                        val offsetWidth = xy[0].toString();
-                        var offsetHeight = xy[1].toString();
-                        if (offsetHeight.toInt() < 1000) {
-                            offsetHeight = (xy[1].toString().toInt() + 20).toString();
-                        }
-                        val data = webView.toBitmap(offsetWidth.toDouble(), offsetHeight.toDouble())
-                        if (data != null) {
-                            printBitmapInPOSPrinter(data, result)
-                        } else {
-                            result.error("1022", "Failed to generate webview image", null)
-                        }
-                    }
-                }, _duration.toLong())
-            }
-        }
-    }
-
     override fun onAttachedToActivity(binding: ActivityPluginBinding) {
         activity = binding.activity
     }
@@ -319,17 +257,4 @@ class PosSdkPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
         private const val TAG: String = "PosPlugin"
         private const val CHANNEL = "br.com.stone/flutter_sdk"
     }
-}
-
-fun WebView.toBitmap(offsetWidth: Double, offsetHeight: Double): Bitmap? {
-    if (offsetHeight > 0 && offsetWidth > 0) {
-        val width = (offsetWidth).absoluteValue.toInt()
-        val height = (offsetHeight).absoluteValue.toInt()
-        this.measure(View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED), View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
-        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(bitmap)
-        this.draw(canvas)
-        return bitmap
-    }
-    return null
 }
