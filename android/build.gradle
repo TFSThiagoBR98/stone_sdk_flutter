@@ -120,6 +120,7 @@ android {
         implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
         implementation 'net.sf.kxml:kxml2:2.3.0'
         implementation "br.com.stone:stone-sdk:$stone_sdk_version"
+        implementation 'com.sunmi:printerlibrary:1.0.19'
         //debugImplementation "br.com.stone.sdk.android:envconfig:$stone_sdk_version"
         implementation "br.com.stone:stone-sdk-posandroid:$stone_sdk_version"
         implementation (group: "androidx.lifecycle", name: "lifecycle-viewmodel-ktx") {

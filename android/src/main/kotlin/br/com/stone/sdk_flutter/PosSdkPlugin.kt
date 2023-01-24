@@ -4,7 +4,13 @@ import android.app.Activity
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Canvas
 import android.graphics.ImageDecoder
+import android.os.Handler
+import android.os.Looper
+import android.view.View
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import androidx.annotation.NonNull
 import br.com.stone.sdk_flutter.helpers.StoneTransactionHelpers
 import br.com.stone.posandroid.providers.PosPrintProvider
@@ -15,6 +21,7 @@ import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
 import io.flutter.embedding.engine.plugins.activity.ActivityAware
 import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
+import org.json.JSONArray
 import stone.application.StoneStart
 import stone.application.interfaces.StoneActionCallback
 import stone.application.enums.Action
@@ -22,6 +29,7 @@ import stone.application.interfaces.StoneCallbackInterface
 import stone.providers.ActiveApplicationProvider
 import stone.user.UserModel
 import stone.utils.Stone
+import kotlin.math.absoluteValue
 import kotlin.math.ceil
 
 /**
@@ -33,6 +41,7 @@ import kotlin.math.ceil
 class PosSdkPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
     private lateinit var channel: MethodChannel
     private lateinit var context: Context
+    private lateinit var webView: WebView
     var currentUserList: List<UserModel>? = null
     private var activity: Activity? = null
 
@@ -86,6 +95,13 @@ class PosSdkPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
             "printImageInPOSPrinter" -> {
                 try {
                     printImageInPOSPrinter(call.argument<ByteArray>("posImage")!!, result)
+                } catch (e: Exception) {
+                    result.error("sdkError", e.message, e.stackTrace);
+                }
+            }
+            "printHTMLInPOSPrinter" -> {
+                try {
+                    printHTMLInPOSPrinter(call.argument<String>("htmlContent")!!, result)
                 } catch (e: Exception) {
                     result.error("sdkError", e.message, e.stackTrace);
                 }
@@ -173,6 +189,106 @@ class PosSdkPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
         }
 
         activeApplicationProvider.deactivate(stoneCode)
+    }
+
+
+
+    private fun printHTMLInPOSPrinter(htmlContent: String, result: Result) {
+        if (!StoneTransactionHelpers.isRunningInPOS(context)) {
+            result.error("101", "You can only run this in a POS", null)
+            return;
+        }
+
+        if (currentUserList.isNullOrEmpty()) {
+            result.error("401", "You need to activate the terminal first", null)
+            return;
+        }
+
+        val transactionProvider = PosPrintProvider(
+            activity!!
+        )
+
+        webView = WebView(this.context)
+
+        val dwidth = this.activity!!.window.windowManager.defaultDisplay.width
+        val dheight = this.activity!!.window.windowManager.defaultDisplay.height
+
+        webView.layout(0, 0, dwidth, dheight)
+        webView.loadDataWithBaseURL(null, htmlContent, "text/HTML", "UTF-8", null)
+        webView.setInitialScale(100)
+        webView.isVerticalScrollBarEnabled = false
+        webView.settings.javaScriptEnabled = false
+        webView.settings.useWideViewPort = true
+        webView.settings.javaScriptCanOpenWindowsAutomatically = true
+        webView.settings.loadWithOverviewMode = true
+        WebView.enableSlowWholeDocumentDraw()
+
+        webView.webViewClient = object : WebViewClient() {
+            override fun onPageFinished(view: WebView, url: String) {
+                super.onPageFinished(view, url)
+
+                val _duration = (dheight / 1000 ).toInt() * 200 ; /// delay 300 ms for every dheight 2000
+
+                Handler(Looper.getMainLooper()).postDelayed({
+                    webView.evaluateJavascript("(function() { return [document.body.offsetWidth, document.body.offsetHeight]; })();"){it
+                        val xy = JSONArray(it)
+                        val offsetWidth = xy[0].toString();
+                        var offsetHeight = xy[1].toString();
+                        if (offsetHeight.toInt() < 1000) {
+                            offsetHeight = (xy[1].toString().toInt() + 20).toString();
+                        }
+                        val computedBitmap = webView.toBitmap(offsetWidth.toDouble(), offsetHeight.toDouble())
+                        if (computedBitmap != null) {
+                            var currentY = 0
+                            var currentBlock = 1
+                            val blockCount = ceil(computedBitmap.height / 595.00)
+
+                            while (currentBlock <= blockCount) {
+                                val targetHeight = if (currentY + 595 > computedBitmap.height) {
+                                    computedBitmap.height - currentY
+                                } else {
+                                    595
+                                }
+
+                                transactionProvider.addBitmap(
+                                    Bitmap.createBitmap(computedBitmap, 0, currentY, computedBitmap.width, targetHeight)
+                                )
+
+                                currentY = if (currentY + 595 > computedBitmap.height) {
+                                    computedBitmap.height - currentY
+                                } else {
+                                    currentY + 595
+                                }
+
+                                currentBlock++
+                            }
+
+                            transactionProvider.useDefaultUI(true)
+                            transactionProvider.dialogMessage = "Imprimindo comprovante..."
+                            transactionProvider.dialogTitle = "Aguarde"
+
+                            transactionProvider.connectionCallback = object : StoneActionCallback {
+                                override fun onSuccess() {
+                                    result.success(true)
+                                }
+
+                                override fun onError() {
+                                    result.error("405", "Generic Error - Transaction Failed [onError from Provider] - Check adb log output", null)
+                                }
+
+                                override fun onStatusChanged(action: Action?) {
+                                    channel.invokeMethod("posStatusChanged", action?.name)
+                                }
+                            }
+
+                            transactionProvider.execute()
+                        } else {
+                            result.error("1022", "Failed to generate webview image", null)
+                        }
+                    }
+                }, _duration.toLong())
+            }
+        }
     }
 
     private fun printImageInPOSPrinter(posImage: ByteArray, result: Result) {
