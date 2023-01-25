@@ -2,18 +2,13 @@ package br.com.stone.sdk_flutter
 
 import android.app.Activity
 import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import android.graphics.Canvas
-import android.graphics.ImageDecoder
-import android.os.Handler
-import android.os.Looper
-import android.view.View
 import android.webkit.WebView
-import android.webkit.WebViewClient
-import androidx.annotation.NonNull
-import br.com.stone.sdk_flutter.helpers.StoneTransactionHelpers
-import br.com.stone.posandroid.providers.PosPrintProvider
+import br.com.stone.sdk_flutter.printers.JicaiPrinter
+import br.com.stone.sdk_flutter.printers.PositivoL3Printer
+import br.com.stone.sdk_flutter.printers.StonePrinter
+import br.com.stone.sdk_flutter.printers.SunmiPrinter
+import br.com.stone.sdk_flutter.stone.StoneCodeManager
+import br.com.stone.sdk_flutter.stone.StoneManager
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
@@ -21,16 +16,12 @@ import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
 import io.flutter.embedding.engine.plugins.activity.ActivityAware
 import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
-import org.json.JSONArray
+import io.flutter.plugin.common.BinaryMessenger
 import stone.application.StoneStart
-import stone.application.interfaces.StoneActionCallback
-import stone.application.enums.Action
 import stone.application.interfaces.StoneCallbackInterface
 import stone.providers.ActiveApplicationProvider
 import stone.user.UserModel
 import stone.utils.Stone
-import kotlin.math.absoluteValue
-import kotlin.math.ceil
 
 /**
  * Flutter Stone SDK Plugin for Flutter
@@ -41,320 +32,47 @@ import kotlin.math.ceil
 class PosSdkPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
     private lateinit var channel: MethodChannel
     private lateinit var context: Context
-    private lateinit var webView: WebView
-    var currentUserList: List<UserModel>? = null
+    private var binaryMessenger: BinaryMessenger? = null
     private var activity: Activity? = null
+
+    private var stoneManager: StoneManager? = null;
+    private var stoneCodeManager: StoneCodeManager? = null;
+    private var printerJicai: JicaiPrinter? = null;
+    private var printerPositivo: PositivoL3Printer? = null;
+    private var printerStone: StonePrinter? = null;
+    private var printerSunmi: SunmiPrinter? = null;
 
     override fun onAttachedToEngine(flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
         context = flutterPluginBinding.applicationContext
 
+        binaryMessenger = flutterPluginBinding.binaryMessenger
         channel = MethodChannel(flutterPluginBinding.binaryMessenger, CHANNEL)
         channel.setMethodCallHandler(this)
     }
 
     override fun onMethodCall(call: MethodCall, result: Result) {
-        when (call.method) {
-            "getPlatformVersion" -> {
-                result.success("Android ${android.os.Build.VERSION.RELEASE}")
-            }
-            "isRunningInPOS" -> {
-                try {
-                    isRunningInPOS(result)
-                } catch (e: Exception) {
-                    result.error("sdkError", e.message, e.stackTrace);
-                }
-            }
-            "isSDKInitialized" -> {
-                try {
-                    isSDKInitialized(result)
-                } catch (e: Exception) {
-                    result.error("sdkError", e.message, e.stackTrace);
-                }
-            }
-            "initSdk" -> {
-                try {
-                    initSdk(call.argument<String>("appName")!!, result)
-                } catch (e: Exception) {
-                    result.error("sdkError", e.message, e.stackTrace);
-                }
-            }
-            "activateCode" -> {
-                try {
-                    activateCode(call.argument<String>("stoneCode")!!, result)
-                } catch (e: Exception) {
-                    result.error("sdkError", e.message, e.stackTrace);
-                }
-            }
-            "deactivateCode" -> {
-                try {
-                    deactivateCode(call.argument<String>("stoneCode")!!, result)
-                } catch (e: Exception) {
-                    result.error("sdkError", e.message, e.stackTrace);
-                }
-            }
-            "printImageInPOSPrinter" -> {
-                try {
-                    printImageInPOSPrinter(call.argument<ByteArray>("posImage")!!, result)
-                } catch (e: Exception) {
-                    result.error("sdkError", e.message, e.stackTrace);
-                }
-            }
-            "printHTMLInPOSPrinter" -> {
-                try {
-                    printHTMLInPOSPrinter(call.argument<String>("htmlContent")!!, result)
-                } catch (e: Exception) {
-                    result.error("sdkError", e.message, e.stackTrace);
-                }
-            }
-            else -> result.notImplemented()
-        }
+        result.notImplemented()
     }
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
+        binaryMessenger = null
         channel.setMethodCallHandler(null)
-    }
-
-    private fun isRunningInPOS(result: Result) {
-        result.success(StoneTransactionHelpers.isRunningInPOS(context))
-    }
-
-    private fun isSDKInitialized(result: Result) {
-        result.success(StoneTransactionHelpers.isSDKInitialized())
-    }
-
-    private fun initSdk(appName: String, result: Result) {
-        currentUserList = StoneStart.init(context)
-        Stone.setAppName(appName)
-    }
-
-    private fun hasStoneCodeInList(stoneCode: String): Boolean {
-        if (currentUserList?.findLast { it.stoneCode.equals(stoneCode) } != null) {
-            return true
-        }
-
-        return false
-    }
-
-    private fun restartStone() {
-        if (Stone.isInitialized()) {
-            currentUserList = StoneStart.init(context)
-        }
-    }
-
-    private fun activateCode(stoneCode: String, result: Result) {
-        if (hasStoneCodeInList(stoneCode)) {
-            result.success(true)
-            return
-        }
-
-        val activeApplicationProvider = ActiveApplicationProvider(activity!!)
-        activeApplicationProvider.dialogTitle = "Ativação"
-        activeApplicationProvider.dialogMessage = "Ativando seu Código"
-        activeApplicationProvider.useDefaultUI(true)
-
-        activeApplicationProvider.connectionCallback = object : StoneCallbackInterface {
-            override fun onSuccess() {
-                restartStone()
-                result.success(true)
-            }
-
-            override fun onError() {
-                result.error("201", "Stone Error: ActiveApplicationProvider", activeApplicationProvider.listOfErrors.toString())
-            }
-        }
-
-        activeApplicationProvider.activate(stoneCode)
-    }
-
-    private fun deactivateCode(stoneCode: String, result: Result) {
-        if (!hasStoneCodeInList(stoneCode)) {
-            result.success(true)
-            return
-        }
-
-        val activeApplicationProvider = ActiveApplicationProvider(activity!!)
-        activeApplicationProvider.dialogTitle = "Desativação"
-        activeApplicationProvider.dialogMessage = "Desativando seu Código"
-        activeApplicationProvider.useDefaultUI(true)
-
-        activeApplicationProvider.connectionCallback = object : StoneCallbackInterface {
-            override fun onSuccess() {
-                restartStone()
-                result.success(true)
-            }
-
-            override fun onError() {
-                result.error("201", "Stone Error: ActiveApplicationProvider", activeApplicationProvider.listOfErrors.toString())
-            }
-        }
-
-        activeApplicationProvider.deactivate(stoneCode)
-    }
-
-
-
-    private fun printHTMLInPOSPrinter(htmlContent: String, result: Result) {
-        if (!StoneTransactionHelpers.isRunningInPOS(context)) {
-            result.error("101", "You can only run this in a POS", null)
-            return;
-        }
-
-        if (currentUserList.isNullOrEmpty()) {
-            result.error("401", "You need to activate the terminal first", null)
-            return;
-        }
-
-        val transactionProvider = PosPrintProvider(
-            activity!!
-        )
-
-        webView = WebView(this.context)
-
-        val dwidth = this.activity!!.window.windowManager.defaultDisplay.width
-        val dheight = this.activity!!.window.windowManager.defaultDisplay.height
-
-        webView.layout(0, 0, dwidth, dheight)
-        webView.loadDataWithBaseURL(null, htmlContent, "text/HTML", "UTF-8", null)
-        webView.setInitialScale(100)
-        webView.isVerticalScrollBarEnabled = false
-        webView.settings.javaScriptEnabled = false
-        webView.settings.useWideViewPort = true
-        webView.settings.javaScriptCanOpenWindowsAutomatically = true
-        webView.settings.loadWithOverviewMode = true
-        WebView.enableSlowWholeDocumentDraw()
-
-        webView.webViewClient = object : WebViewClient() {
-            override fun onPageFinished(view: WebView, url: String) {
-                super.onPageFinished(view, url)
-
-                val _duration = (dheight / 1000 ).toInt() * 200 ; /// delay 300 ms for every dheight 2000
-
-                Handler(Looper.getMainLooper()).postDelayed({
-                    webView.evaluateJavascript("(function() { return [document.body.offsetWidth, document.body.offsetHeight]; })();"){it
-                        val xy = JSONArray(it)
-                        val offsetWidth = xy[0].toString();
-                        var offsetHeight = xy[1].toString();
-                        if (offsetHeight.toInt() < 1000) {
-                            offsetHeight = (xy[1].toString().toInt() + 20).toString();
-                        }
-                        val computedBitmap = webView.toBitmap(offsetWidth.toDouble(), offsetHeight.toDouble())
-                        if (computedBitmap != null) {
-                            var currentY = 0
-                            var currentBlock = 1
-                            val blockCount = ceil(computedBitmap.height / 595.00)
-
-                            while (currentBlock <= blockCount) {
-                                val targetHeight = if (currentY + 595 > computedBitmap.height) {
-                                    computedBitmap.height - currentY
-                                } else {
-                                    595
-                                }
-
-                                transactionProvider.addBitmap(
-                                    Bitmap.createBitmap(computedBitmap, 0, currentY, computedBitmap.width, targetHeight)
-                                )
-
-                                currentY = if (currentY + 595 > computedBitmap.height) {
-                                    computedBitmap.height - currentY
-                                } else {
-                                    currentY + 595
-                                }
-
-                                currentBlock++
-                            }
-
-                            transactionProvider.useDefaultUI(true)
-                            transactionProvider.dialogMessage = "Imprimindo comprovante..."
-                            transactionProvider.dialogTitle = "Aguarde"
-
-                            transactionProvider.connectionCallback = object : StoneActionCallback {
-                                override fun onSuccess() {
-                                    result.success(true)
-                                }
-
-                                override fun onError() {
-                                    result.error("405", "Generic Error - Transaction Failed [onError from Provider] - Check adb log output", null)
-                                }
-
-                                override fun onStatusChanged(action: Action?) {
-                                    channel.invokeMethod("posStatusChanged", action?.name)
-                                }
-                            }
-
-                            transactionProvider.execute()
-                        } else {
-                            result.error("1022", "Failed to generate webview image", null)
-                        }
-                    }
-                }, _duration.toLong())
-            }
-        }
-    }
-
-    private fun printImageInPOSPrinter(posImage: ByteArray, result: Result) {
-        if (!StoneTransactionHelpers.isRunningInPOS(context)) {
-            result.error("101", "You can only run this in a POS", null)
-            return;
-        }
-
-        if (currentUserList.isNullOrEmpty()) {
-            result.error("401", "You need to activate the terminal first", null)
-            return;
-        }
-
-        val transactionProvider = PosPrintProvider(
-                activity!!
-        )
-
-        val computedBitmap: Bitmap = BitmapFactory.decodeByteArray(posImage, 0, posImage.size)
-
-        var currentY = 0
-        var currentBlock = 1
-        val blockCount = ceil(computedBitmap.height / 595.00)
-
-        while (currentBlock <= blockCount) {
-            val targetHeight = if (currentY + 595 > computedBitmap.height) {
-                computedBitmap.height - currentY
-            } else {
-                595
-            }
-
-            transactionProvider.addBitmap(
-                    Bitmap.createBitmap(computedBitmap, 0, currentY, computedBitmap.width, targetHeight)
-            )
-
-            currentY = if (currentY + 595 > computedBitmap.height) {
-                computedBitmap.height - currentY
-            } else {
-                currentY + 595
-            }
-
-            currentBlock++
-        }
-
-        transactionProvider.useDefaultUI(true)
-        transactionProvider.dialogMessage = "Imprimindo comprovante..."
-        transactionProvider.dialogTitle = "Aguarde"
-
-        transactionProvider.connectionCallback = object : StoneActionCallback {
-            override fun onSuccess() {
-                result.success(true)
-            }
-
-            override fun onError() {
-                result.error("405", "Generic Error - Transaction Failed [onError from Provider] - Check adb log output", null)
-            }
-
-            override fun onStatusChanged(action: Action?) {
-                channel.invokeMethod("posStatusChanged", action?.name)
-            }
-        }
-
-        transactionProvider.execute()
     }
 
     override fun onAttachedToActivity(binding: ActivityPluginBinding) {
         activity = binding.activity
+        stoneManager = StoneManager(context, binding.activity, binaryMessenger!!)
+        stoneCodeManager = StoneCodeManager(context, binding.activity, binaryMessenger!!)
+
+        // Printers
+        printerJicai = JicaiPrinter(context, binaryMessenger!!)
+        printerJicai?.start()
+        printerPositivo = PositivoL3Printer(context, binaryMessenger!!)
+        printerPositivo?.start()
+        printerStone = StonePrinter(context, binding.activity, binaryMessenger!!)
+        printerStone?.start()
+        printerSunmi = SunmiPrinter(context, binaryMessenger!!)
+        printerSunmi?.start()
     }
 
     override fun onDetachedFromActivityForConfigChanges() {
@@ -367,6 +85,12 @@ class PosSdkPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
 
     override fun onDetachedFromActivity() {
         activity = null
+        stoneManager = null
+        stoneCodeManager = null
+        printerJicai = null
+        printerPositivo = null
+        printerStone = null
+        printerSunmi = null
     }
 
     companion object {

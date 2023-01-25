@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:stone_sdk_flutter/stone_sdk_flutter.dart';
 
 void main() {
   runApp(const MyApp());
@@ -17,7 +16,6 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   String _platformVersion = 'Unknown';
-  final _posSdkPlugin = StoneSdk();
 
   @override
   void initState() {
@@ -31,7 +29,7 @@ class _MyAppState extends State<MyApp> {
     // Platform messages may fail, so we use a try/catch PlatformException.
     // We also handle the message potentially returning null.
     try {
-      platformVersion = await _posSdkPlugin.getPlatformVersion() ?? 'Unknown platform version';
+      platformVersion = 'Unknown platform version';
     } on PlatformException {
       platformVersion = 'Failed to get platform version.';
     }

@@ -28,7 +28,31 @@ fun WebView.toBitmap(offsetWidth: Double, offsetHeight: Double): Bitmap? {
     return null
 }
 
-fun getBitmapFromHtml(htmlContent: String, context: Context, onPrintBitmap: (result: Bitmap) -> Unit) {
+fun processBitmapForPrint(bitmap: Bitmap, onPrintBitmap: (result: Bitmap) -> Unit) {
+    var currentY = 0
+    var currentBlock = 1
+    val blockCount = ceil(bitmap.height / 595.00)
+
+    while (currentBlock <= blockCount) {
+        val targetHeight = if (currentY + 595 > bitmap.height) {
+            bitmap.height - currentY
+        } else {
+            595
+        }
+
+        onPrintBitmap(Bitmap.createBitmap(bitmap, 0, currentY, bitmap.width, targetHeight))
+
+        currentY = if (currentY + 595 > bitmap.height) {
+            bitmap.height - currentY
+        } else {
+            currentY + 595
+        }
+
+        currentBlock++
+    }
+}
+
+fun getBitmapFromHtml(htmlContent: String, context: Context, onPrintBitmap: (result: Bitmap) -> Unit, onComplete: () -> Unit) {
     val webView = WebView(context)
 
     val dwidth = 380
@@ -38,7 +62,7 @@ fun getBitmapFromHtml(htmlContent: String, context: Context, onPrintBitmap: (res
     webView.loadDataWithBaseURL(null, htmlContent, "text/HTML", "UTF-8", null)
     webView.setInitialScale(100)
     webView.isVerticalScrollBarEnabled = false
-    webView.settings.javaScriptEnabled = false
+    webView.settings.javaScriptEnabled = true
     webView.settings.useWideViewPort = true
     webView.settings.javaScriptCanOpenWindowsAutomatically = true
     webView.settings.loadWithOverviewMode = true
