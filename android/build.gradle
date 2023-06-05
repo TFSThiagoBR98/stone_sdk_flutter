@@ -1,5 +1,5 @@
 group 'br.com.stone.sdk_flutter'
-version '1.0-SNAPSHOT'
+version '0.1-SNAPSHOT'
 
 buildscript {
     ext.kotlin_version = '1.7.21'
@@ -72,7 +72,7 @@ android {
         exclude group: "xpp3", module: "xpp3_min"
     }
 
-    def stone_sdk_version = "4.4.1"
+    def stone_sdk_version = "4.5.6"
 
     String posMode = rootProject.ext.has('posMode') ? rootProject.ext.get('posMode') : (
         project.properties.containsKey('StonePos_posMode') ?
