@@ -18,13 +18,13 @@
             120
         ],
         "editor.codeActionsOnSave": {
-            "source.organizeImports": true
+            "source.organizeImports": "explicit"
         },
         "editor.selectionHighlight": false,
         "editor.suggest.snippetsPreventQuickSuggestions": false,
         "editor.suggestSelection": "first",
         "editor.tabCompletion": "onlySnippets",
-        "editor.wordBasedSuggestions": false
+        "editor.wordBasedSuggestions": "off"
     },
     "dart.autoImportCompletions": true,
     "dart.debugSdkLibraries": true,
